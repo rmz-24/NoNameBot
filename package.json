@@ -21,8 +21,5 @@
   "homepage": "https://github.com/rmz-24/NoNameBot#readme",
   "dependencies": {
     "discord.js": "^14.18.0"
-  },
-  "devDependencies": {
-    "eslint": "^9.21.0"
   }
 }
