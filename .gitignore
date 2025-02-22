@@ -1,0 +1,13 @@
+# Common ignored files:
+
+node_modules/
+package-lock.json
+config.json
+
+# Ramzi's ignored files:
+
+eslint.config.js
+
+# Benzou's ignored files:
+
+# Wassimou's ignored files:
