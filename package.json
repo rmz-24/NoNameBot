@@ -1,0 +1,25 @@
+{
+  "name": "nonamebot",
+  "version": "1.0.0",
+  "description": "NoName's discord bot.",
+  "main": "index.js",
+  "scripts": {
+    "test": "echo \"Error: no test specified\" && exit 1"
+  },
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/rmz-24/NoNameBot.git"
+  },
+  "keywords": [
+    "bot"
+  ],
+  "author": "Ramzi",
+  "license": "ISC",
+  "bugs": {
+    "url": "https://github.com/rmz-24/NoNameBot/issues"
+  },
+  "homepage": "https://github.com/rmz-24/NoNameBot#readme",
+  "dependencies": {
+    "discord.js": "^14.18.0"
+  }
+}
