@@ -20,9 +20,14 @@
   },
   "homepage": "https://github.com/rmz-24/NoNameBot#readme",
   "dependencies": {
+    "@discordjs/opus": "^0.10.0",
     "@discordjs/voice": "^0.18.0",
     "adhan": "^4.4.3",
     "discord.js": "^14.18.0",
-    "node-cron": "^3.0.3"
+    "ffmpeg": "^0.0.4",
+    "ffmpeg-static": "^5.2.0",
+    "libsodium-wrappers": "^0.7.15",
+    "node-cron": "^3.0.3",
+    "opus": "^0.0.0"
   }
 }
