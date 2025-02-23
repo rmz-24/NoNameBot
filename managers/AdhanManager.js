@@ -1,6 +1,12 @@
 const cron = require("node-cron");
-const {joinVoiceChannel,createAudioPlayer,createAudioResource} = require("@discordjs/voice");
-const adhan = require("adhan");
+const {joinVoiceChannel,createAudioPlayer,createAudioResource,AudioPlayerStatus, StreamType} = require("@discordjs/voice");
+const {Coordinates, CalculationMethod, PrayerTimes} = require("adhan");
+const coordinates = new Coordinates(36.780,3.06);
+const parameters = CalculationMethod.UmmAlQura();
+const fs = require("fs");
+const prism = require("prism-media");
+const path = require("path");
+let isPlaying = false;
 
 /**
  * Kicks all bots (other than the client) from all voice channels
