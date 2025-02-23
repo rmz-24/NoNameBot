@@ -152,4 +152,5 @@ function createFFmpegPCMStream(filePath) {
 
 
 module.exports = {
+    scheduleAdhanNotifier
 }
