@@ -2,6 +2,10 @@ const cron = require("node-cron");
 const {joinVoiceChannel,createAudioPlayer,createAudioResource} = require("@discordjs/voice");
 const adhan = require("adhan");
 
+/**
+ * Kicks all bots (other than the client) from all voice channels
+ * @param client Bot instance
+ */
 function kickAllBots(client) {
     client.guilds.cache.forEach(guild => {
         guild.members.cache
