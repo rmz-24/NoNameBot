@@ -1,4 +1,5 @@
 const { Events } = require('discord.js');
+const AdhanManager = require('../managers/AdhanManager');
 
 module.exports = {
 	name: Events.ClientReady,
