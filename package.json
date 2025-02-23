@@ -20,6 +20,7 @@
   },
   "homepage": "https://github.com/rmz-24/NoNameBot#readme",
   "dependencies": {
+    "adhan": "^4.4.3",
     "discord.js": "^14.18.0"
   }
 }
