@@ -20,6 +20,7 @@
   },
   "homepage": "https://github.com/rmz-24/NoNameBot#readme",
   "dependencies": {
+    "@discordjs/voice": "^0.18.0",
     "adhan": "^4.4.3",
     "discord.js": "^14.18.0",
     "node-cron": "^3.0.3"
