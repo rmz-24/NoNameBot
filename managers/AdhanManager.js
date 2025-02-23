@@ -1,4 +1,3 @@
-const cron = require("node-cron");
 const {joinVoiceChannel,createAudioPlayer,createAudioResource,AudioPlayerStatus, StreamType} = require("@discordjs/voice");
 const {Coordinates, CalculationMethod, PrayerTimes} = require("adhan");
 const coordinates = new Coordinates(36.780,3.06);
@@ -6,7 +5,6 @@ const parameters = CalculationMethod.UmmAlQura();
 const fs = require("fs");
 const prism = require("prism-media");
 const path = require("path");
-let isPlaying = false;
 
 /**
  * Kicks all bots (other than the client) from all voice channels
@@ -34,31 +32,33 @@ function getPrayerTimes() {
 }
 
 /**
- * Infinite cron based loop to notify of Adhan when necessary
+ * Infinite loop to notify of Adhan when necessary
  */
 function scheduleAdhanNotifier(client) {
     console.log("Lancement de l'Adhan Manager");
-
-    cron.schedule("*/20 * * * * *", () => {
+    function checkAndSchedule() {
         const now = new Date();
         const prayerTimes = getPrayerTimes();
-        let prayer = prayerTimes.nextPrayer();
-        let prayerTime = prayerTimes.timeForPrayer(prayer);
-
-        if (
-            now.getHours() === prayerTime.getHours() &&
-            now.getMinutes() === prayerTime.getMinutes()
-        ) {
-            const channel = client.channels.cache.get("1200937759351767274"); // ✅ Récupérer le salon texte
-            if (channel) {
-                channel.send(`Aller les <@&1200937306958348338> c'est l'heure du **${prayer}** ! 🕌`);
-            } else {
-                console.error("⚠️ Salon introuvable !");
-            }
-
-            playAdhan(client);
+        const nextPrayer = prayerTimes.nextPrayer();
+        const nextPrayerTime = prayerTimes.timeForPrayer(nextPrayer);
+        const delay = nextPrayerTime.getTime() - now.getTime();
+        if (delay > 0) {
+            console.log(`Prochaine prière : ${nextPrayer} à ${nextPrayerTime.toLocaleTimeString()}`);
+            setTimeout(() => {
+                const channel = client.channels.cache.get("1200937759351767274");
+                if (channel) {
+                    channel.send(`Aller les <@&1200937306958348338> c'est l'heure du **${nextPrayer}** ! 🕌`);
+                } else {
+                    console.error("⚠️ Salon introuvable !");
+                }
+                playAdhan(client);
+                checkAndSchedule();
+            }, delay);
+        } else {
+            checkAndSchedule();
         }
-    });
+    }
+    checkAndSchedule();
 }
 
 
@@ -95,25 +95,17 @@ function getMostUsedVoiceChannels(client) {
  * @param {Client} client - Instance du bot
  */
 function playAdhan(client) {
-    if (isPlaying) {
-        console.log("⏳ Un Adhan est déjà en cours. Annulation...");
-        return;
-    }
-
-    isPlaying = true;
     const voiceChannels = getMostUsedVoiceChannels(client);
     const audioPath = path.join(__dirname, "../resources/adhan.wav");
 
     if (!fs.existsSync(audioPath)) {
         console.error("⚠️ Fichier audio introuvable : " + audioPath);
-        isPlaying = false;
         return;
     }
 
     voiceChannels.forEach(channel => {
         if (!channel || !channel.guild) {
             console.error("⚠️ Erreur : Channel ou Guild non défini.");
-            isPlaying = false;
             return;
         }
 
@@ -137,12 +129,10 @@ function playAdhan(client) {
             player.on(AudioPlayerStatus.Idle, () => {
                 console.log("✅ Fin de l'Adhan.");
                 connection.destroy();
-                isPlaying = false;
             });
 
         } catch (error) {
             console.error(`❌ Impossible de rejoindre ${channel.name} :`, error);
-            isPlaying = false;
         }
     });
 }
