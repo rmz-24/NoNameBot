@@ -2,3 +2,4 @@ node_modules/
 eslint.config.js
 package-lock.json
 config.json
+eslintrc.json
