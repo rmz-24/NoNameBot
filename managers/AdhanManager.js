@@ -4,6 +4,7 @@ const moment = require('moment-timezone');
 const {playAudio} = require("./AudioManager");
 const {kickAllBots, getMostUsedVoiceChannels} = require("../utils/VoiceUtils");
 const {loadConfig} = require("./ConfigManager");
+const inShedulerGuilds = new Map();
 
 /**
  * Getting prayer times for a given configuration
@@ -39,6 +40,12 @@ function scheduleAdhanNotifier(client) {
  * @param {string} guildId
  */
 function startSchedulerForGuild(client, guildId) {
+
+    const scheduledTimeout = inShedulerGuilds.get(guildId);
+    if(scheduledTimeout) {
+        clearTimeout(scheduledTimeout);
+        inShedulerGuilds.delete(guildId);
+    }
     function checkAndSchedule() {
         const config = loadConfig(guildId);
         const prayerTimes = getPrayerTimes(config);
@@ -47,7 +54,7 @@ function startSchedulerForGuild(client, guildId) {
         const delay = nextPrayerTime.getTime() - Date.now();
         if (delay > 0) {
             console.log(`[${guildId}] Prochaine prière : ${nextPrayer} à ${nextPrayerTime.toLocaleTimeString()}`);
-            setTimeout(() => {
+            const timeout = setTimeout(() => {
                 const channel = client.channels.cache.get(config.channelId);
                 if (channel) {
                     const message = config.message.replace('{prayer}', nextPrayer);
@@ -56,6 +63,7 @@ function startSchedulerForGuild(client, guildId) {
                 playAdhan(client,null);
                 checkAndSchedule();
             }, delay);
+            inShedulerGuilds.set(guildId, nextPrayer);
         } else {
             setTimeout(checkAndSchedule, 1000);
         }
