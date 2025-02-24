@@ -3,9 +3,9 @@ const { Coordinates, CalculationMethod, PrayerTimes } = require('adhan');
 const geocoder = require('node-geocoder');
 const fs = require('fs');
 const path = require('path');
-const {playAdhan, loadConfig} = require("../../managers/AdhanManager");
 const {find} = require('geo-tz');
 const moment = require('moment-timezone');
+const {loadConfig} = require("../../managers/ConfigManager");
 
 const geo = geocoder({ provider: 'openstreetmap' });
 
@@ -66,11 +66,9 @@ async function handleConfig(interaction, config, configPath) {
         '523543290377928734',
         '766072533975302185'
     ];
-
-    const isAdmin = interaction.member.permissions.has('ADMINISTRATOR');
     const isAuthorizedUser = allowedUserIds.includes(interaction.user.id);
 
-    if (!isAdmin && !isAuthorizedUser) {
+    if (!isAuthorizedUser) {
         return interaction.reply({
             content: '❌ Vous n\'avez pas la permission de configurer l\'Adhan !',
             ephemeral: true

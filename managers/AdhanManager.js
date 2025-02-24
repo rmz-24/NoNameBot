@@ -1,33 +1,9 @@
-const {
-    joinVoiceChannel,
-    createAudioPlayer,
-    createAudioResource,
-    AudioPlayerStatus,
-    StreamType
-} = require("@discordjs/voice");
 const {Coordinates, CalculationMethod, PrayerTimes} = require("adhan");
-const fs = require("fs");
-const prism = require("prism-media");
-const path = require("path");
 const {find} = require('geo-tz');
 const moment = require('moment-timezone');
-const dataPath = path.join(__dirname, '../data');
-
-/**
- * Kicks all bots (other than the client) from all voice channels
- * @param client Bot instance
- */
-function kickAllBots(client) {
-    client.guilds.cache.forEach(guild => {
-        guild.members.cache
-            .filter(member => member.user.bot && member.user.id !== client.user.id)
-            .forEach(member => {
-                if (member && member.voice.channel) {
-                    member.voice.disconnect();
-                }
-            });
-    })
-}
+const {playAudio} = require("./AudioManager");
+const {kickAllBots, getMostUsedVoiceChannels} = require("../utils/VoiceUtils");
+const {loadConfig} = require("./ConfigManager");
 
 /**
  * Getting prayer times for a given configuration
@@ -48,31 +24,10 @@ function getPrayerTimes(config) {
 }
 
 /**
- * Loads guilds configurations
- * @param {string} guildId
- * @returns {Object}
- */
-function loadConfig(guildId) {
-    const configPath = path.join(dataPath, `${guildId}.json`);
-    try {
-        return JSON.parse(fs.readFileSync(configPath));
-    } catch {
-        return {
-            city: 'Alger',
-            coordinates: [36.7755, 3.0587],
-            channelId: null,
-            message: "Aller les fidèles, c'est l'heure du **{prayer}** ! 🕌"
-        };
-    }
-}
-
-/**
  * Schedule Adhan's notifications for all servers
  * @param {Client} client
  */
 function scheduleAdhanNotifier(client) {
-    console.log("Lancement de l'Adhan Manager");
-
     client.guilds.cache.forEach(guild => {
         startSchedulerForGuild(client, guild.id);
     });
@@ -90,10 +45,8 @@ function startSchedulerForGuild(client, guildId) {
         const nextPrayer = prayerTimes.nextPrayer();
         const nextPrayerTime = prayerTimes.timeForPrayer(nextPrayer);
         const delay = nextPrayerTime.getTime() - Date.now();
-
         if (delay > 0) {
             console.log(`[${guildId}] Prochaine prière : ${nextPrayer} à ${nextPrayerTime.toLocaleTimeString()}`);
-
             setTimeout(() => {
                 const channel = client.channels.cache.get(config.channelId);
                 if (channel) {
@@ -107,52 +60,7 @@ function startSchedulerForGuild(client, guildId) {
             setTimeout(checkAndSchedule, 1000);
         }
     }
-
     checkAndSchedule();
-}
-
-
-/**
- * Returns a list of the most used voice channels across all guilds
- * @param {Client} client - Bot instance
- * @param guildId - null or guild to get in the voice channel
- * @returns {Array<Object>} - Most used voice channels list
- */
-function getMostUsedVoiceChannels(client, guildId) {
-    const mostUsedChannels = [];
-
-    if (guildId) {
-        const guild = client.guilds.cache.get(guildId);
-        const voiceChannels = guild.channels.cache.filter(channel =>
-            channel.type === 2 && channel.members.size > 0 // Type 2 = Salon vocal
-        );
-
-        if (voiceChannels.size > 0) {
-            const mostPopulated = [...voiceChannels.values()].reduce((max, channel) =>
-                channel.members.size > max.members.size ? channel : max
-            );
-
-            mostUsedChannels.push(mostPopulated);
-        }
-
-        return mostUsedChannels;
-    }
-
-    client.guilds.cache.forEach(guild => {
-        const voiceChannels = guild.channels.cache.filter(channel =>
-            channel.type === 2 && channel.members.size > 0 // Type 2 = Salon vocal
-        );
-
-        if (voiceChannels.size > 0) {
-            const mostPopulated = [...voiceChannels.values()].reduce((max, channel) =>
-                channel.members.size > max.members.size ? channel : max
-            );
-
-            mostUsedChannels.push(mostPopulated);
-        }
-    });
-
-    return mostUsedChannels;
 }
 
 /**
@@ -162,60 +70,17 @@ function getMostUsedVoiceChannels(client, guildId) {
  */
 function playAdhan(client, guildId) {
     const voiceChannels = getMostUsedVoiceChannels(client, guildId);
-    const audioPath = path.join(__dirname, "../resources/adhan.wav");
-
-    if (!fs.existsSync(audioPath)) {
-        console.error("⚠️ Fichier audio introuvable : " + audioPath);
-        return;
-    }
-
     voiceChannels.forEach(channel => {
         if (!channel || !channel.guild) {
             console.error("⚠️ Erreur : Channel ou Guild non défini.");
             return;
         }
-
-        try {
-            console.log(`🔊 Connexion au salon : ${channel.name} (${channel.guild.name})`);
-
-            const connection = joinVoiceChannel({
-                channelId: channel.id,
-                guildId: channel.guild.id,
-                adapterCreator: channel.guild.voiceAdapterCreator
-            });
-
-            const player = createAudioPlayer();
-            const pcmStream = createFFmpegPCMStream(audioPath);
-            const resource = createAudioResource(pcmStream, {inputType: StreamType.Raw});
-
-            kickAllBots(client);
-            player.play(resource);
-            connection.subscribe(player);
-
-            player.on(AudioPlayerStatus.Idle, () => {
-                console.log("✅ Fin de l'Adhan.");
-                connection.destroy();
-            });
-
-        } catch (error) {
-            console.error(`❌ Impossible de rejoindre ${channel.name} :`, error);
-        }
-    });
-}
-
-function createFFmpegPCMStream(filePath) {
-    return new prism.FFmpeg({
-        args: [
-            "-i", filePath,
-            "-f", "s16le",
-            "-ar", "48000",
-            "-ac", "2"
-        ],
-        stdio: ["pipe", "pipe", "ignore"]
+        kickAllBots(client);
+        playAudio(client, channel, "adhan.wav");
     });
 }
 
 
 module.exports = {
-    scheduleAdhanNotifier, playAdhan, loadConfig
+    scheduleAdhanNotifier
 }
