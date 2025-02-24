@@ -119,7 +119,7 @@ async function handleForce(interaction) {
     const client = interaction.client;
 
     try {
-        playAdhan(client);
+        playAdhan(client,interaction.guildId);
         interaction.editReply('✅ Adhan lancé avec succès !');
     } catch (error) {
         interaction.editReply('❌ Erreur lors de la lecture de l\'Adhan');

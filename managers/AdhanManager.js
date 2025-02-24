@@ -1,4 +1,10 @@
-const {joinVoiceChannel, createAudioPlayer, createAudioResource, AudioPlayerStatus, StreamType} = require("@discordjs/voice");
+const {
+    joinVoiceChannel,
+    createAudioPlayer,
+    createAudioResource,
+    AudioPlayerStatus,
+    StreamType
+} = require("@discordjs/voice");
 const {Coordinates, CalculationMethod, PrayerTimes} = require("adhan");
 const fs = require("fs");
 const prism = require("prism-media");
@@ -16,7 +22,7 @@ function kickAllBots(client) {
         guild.members.cache
             .filter(member => member.user.bot && member.user.id !== client.user.id)
             .forEach(member => {
-                if(member && member.voice.channel) {
+                if (member && member.voice.channel) {
                     member.voice.disconnect();
                 }
             });
@@ -94,7 +100,7 @@ function startSchedulerForGuild(client, guildId) {
                     const message = config.message.replace('{prayer}', nextPrayer);
                     channel.send(message);
                 }
-                playAdhan(client);
+                playAdhan(client,null);
                 checkAndSchedule();
             }, delay);
         } else {
@@ -106,16 +112,31 @@ function startSchedulerForGuild(client, guildId) {
 }
 
 
-
-
-
 /**
  * Returns a list of the most used voice channels across all guilds
  * @param {Client} client - Bot instance
+ * @param guildId - null or guild to get in the voice channel
  * @returns {Array<Object>} - Most used voice channels list
  */
-function getMostUsedVoiceChannels(client) {
+function getMostUsedVoiceChannels(client, guildId) {
     const mostUsedChannels = [];
+
+    if (guildId) {
+        const guild = client.guilds.cache.get(guildId);
+        const voiceChannels = guild.channels.cache.filter(channel =>
+            channel.type === 2 && channel.members.size > 0 // Type 2 = Salon vocal
+        );
+
+        if (voiceChannels.size > 0) {
+            const mostPopulated = [...voiceChannels.values()].reduce((max, channel) =>
+                channel.members.size > max.members.size ? channel : max
+            );
+
+            mostUsedChannels.push(mostPopulated);
+        }
+
+        return mostUsedChannels;
+    }
 
     client.guilds.cache.forEach(guild => {
         const voiceChannels = guild.channels.cache.filter(channel =>
@@ -137,9 +158,10 @@ function getMostUsedVoiceChannels(client) {
 /**
  * Plays the Adhan in the most used voice Channels
  * @param {Client} client - Instance du bot
+ * @param guildId null or guild to play in the Adhan
  */
-function playAdhan(client) {
-    const voiceChannels = getMostUsedVoiceChannels(client);
+function playAdhan(client, guildId) {
+    const voiceChannels = getMostUsedVoiceChannels(client, guildId);
     const audioPath = path.join(__dirname, "../resources/adhan.wav");
 
     if (!fs.existsSync(audioPath)) {
@@ -164,7 +186,7 @@ function playAdhan(client) {
 
             const player = createAudioPlayer();
             const pcmStream = createFFmpegPCMStream(audioPath);
-            const resource = createAudioResource(pcmStream, { inputType: StreamType.Raw });
+            const resource = createAudioResource(pcmStream, {inputType: StreamType.Raw});
 
             kickAllBots(client);
             player.play(resource);
@@ -194,7 +216,6 @@ function createFFmpegPCMStream(filePath) {
 }
 
 
-
 module.exports = {
-    scheduleAdhanNotifier,playAdhan,loadConfig
+    scheduleAdhanNotifier, playAdhan, loadConfig
 }
