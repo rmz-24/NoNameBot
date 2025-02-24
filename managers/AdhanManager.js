@@ -58,7 +58,7 @@ function startSchedulerForGuild(client, guildId) {
                 const channel = client.channels.cache.get(config.channelId);
                 if (channel) {
                     const message = config.message.replace('{prayer}', nextPrayer);
-                    channel.send(message);
+                    channel.send(message)
                 }
                 playAdhan(client,null);
                 checkAndSchedule();
@@ -90,5 +90,5 @@ function playAdhan(client, guildId) {
 
 
 module.exports = {
-    scheduleAdhanNotifier
+    scheduleAdhanNotifier, startSchedulerForGuild
 }

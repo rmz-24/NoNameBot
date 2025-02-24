@@ -6,6 +6,7 @@ const path = require('path');
 const {find} = require('geo-tz');
 const moment = require('moment-timezone');
 const {loadConfig} = require("../../managers/ConfigManager");
+const {startSchedulerForGuild} = require("../../managers/AdhanManager");
 
 const geo = geocoder({ provider: 'openstreetmap' });
 
@@ -105,6 +106,12 @@ async function handleConfig(interaction, config, configPath) {
     }
 
     fs.writeFileSync(configPath, JSON.stringify(config, null, 2));
+
+    try {
+      startSchedulerForGuild(interaction.client, interaction.guildId);
+    } catch (error) {
+        console.error("Error when refreshing scheduler");
+    }
 
     interaction.reply({
         content: updateMsg.join('\n') || '❌ Aucun paramètre modifié',
