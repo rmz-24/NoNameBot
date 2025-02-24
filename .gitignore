@@ -12,3 +12,4 @@ eslint.config.js
 
 # Wassimou's ignored files:
 resources
+data
