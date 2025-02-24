@@ -1,10 +1,11 @@
-const {joinVoiceChannel,createAudioPlayer,createAudioResource,AudioPlayerStatus, StreamType} = require("@discordjs/voice");
+const {joinVoiceChannel, createAudioPlayer, createAudioResource, AudioPlayerStatus, StreamType} = require("@discordjs/voice");
 const {Coordinates, CalculationMethod, PrayerTimes} = require("adhan");
-const coordinates = new Coordinates(36.780,3.06);
-const parameters = CalculationMethod.UmmAlQura();
 const fs = require("fs");
 const prism = require("prism-media");
 const path = require("path");
+const {find} = require('geo-tz');
+const moment = require('moment-timezone');
+const dataPath = path.join(__dirname, '../data');
 
 /**
  * Kicks all bots (other than the client) from all voice channels
@@ -23,41 +24,84 @@ function kickAllBots(client) {
 }
 
 /**
- * Getting daily prayer times
+ * Getting prayer times for a given configuration
+ * @param {Object} config
  * @returns {PrayerTimes}
  */
-function getPrayerTimes() {
-    const date = new Date();
-    return new PrayerTimes(coordinates, date, parameters);
+function getPrayerTimes(config) {
+    const coordinates = new Coordinates(...config.coordinates);
+    const timeZones = find(config.coordinates[0], config.coordinates[1]);
+    const timeZone = timeZones[0] || 'Africa/Algiers';
+    const localDate = moment().tz(timeZone).toDate();
+
+    return new PrayerTimes(
+        coordinates,
+        localDate,
+        CalculationMethod.UmmAlQura()
+    );
 }
 
 /**
- * Infinite loop to notify of Adhan when necessary
+ * Loads guilds configurations
+ * @param {string} guildId
+ * @returns {Object}
+ */
+function loadConfig(guildId) {
+    const configPath = path.join(dataPath, `${guildId}.json`);
+    try {
+        return JSON.parse(fs.readFileSync(configPath));
+    } catch {
+        return {
+            city: 'Alger',
+            coordinates: [36.7755, 3.0587],
+            channelId: null,
+            message: "Aller les fidèles, c'est l'heure du **{prayer}** ! 🕌"
+        };
+    }
+}
+
+/**
+ * Schedule Adhan's notifications for all servers
+ * @param {Client} client
  */
 function scheduleAdhanNotifier(client) {
     console.log("Lancement de l'Adhan Manager");
+
+    client.guilds.cache.forEach(guild => {
+        startSchedulerForGuild(client, guild.id);
+    });
+}
+
+/**
+ * Starts scheduler for a specific guild
+ * @param {Client} client
+ * @param {string} guildId
+ */
+function startSchedulerForGuild(client, guildId) {
     function checkAndSchedule() {
-        const now = new Date();
-        const prayerTimes = getPrayerTimes();
+        const config = loadConfig(guildId);
+        const prayerTimes = getPrayerTimes(config);
         const nextPrayer = prayerTimes.nextPrayer();
         const nextPrayerTime = prayerTimes.timeForPrayer(nextPrayer);
-        const delay = nextPrayerTime.getTime() - now.getTime();
+        const delay = nextPrayerTime.getTime() - Date.now();
+
         if (delay > 0) {
-            console.log(`Prochaine prière : ${nextPrayer} à ${nextPrayerTime.toLocaleTimeString()}`);
+            console.log(`[${guildId}] Prochaine prière : ${nextPrayer} à ${nextPrayerTime.toLocaleTimeString()}`);
+
             setTimeout(() => {
-                const channel = client.channels.cache.get("1200937759351767274");
+                const channel = client.channels.cache.get(config.channelId);
                 if (channel) {
-                    channel.send(`Aller les <@&1200937306958348338> c'est l'heure du **${nextPrayer}** ! 🕌`);
-                } else {
-                    console.error("⚠️ Salon introuvable !");
+                    const message = config.message.replace('{prayer}', nextPrayer);
+                    channel.send(message);
                 }
                 playAdhan(client);
                 checkAndSchedule();
             }, delay);
         } else {
-            checkAndSchedule();
+            setTimeout(checkAndSchedule, 1000);
         }
     }
+
     checkAndSchedule();
 }
 
@@ -152,5 +196,5 @@ function createFFmpegPCMStream(filePath) {
 
 
 module.exports = {
-    scheduleAdhanNotifier
+    scheduleAdhanNotifier,playAdhan,loadConfig
 }
