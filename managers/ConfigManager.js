@@ -1,13 +1,17 @@
+/**
+ * @author waSStyle
+ */
+
 const {join} = require("node:path");
 const fs = require("node:fs");
 const path = require("path");
 const dataPath = path.join(__dirname, '../data');
+
 /**
  * Loads guilds configurations
  * @param {string} guildId
  * @returns {Object}
  */
-
 function loadConfig(guildId) {
     const configPath = join(dataPath, `${guildId}.json`);
     try {

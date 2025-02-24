@@ -1,10 +1,14 @@
+/**
+ * @author waSStyle
+ */
+
 const {Coordinates, CalculationMethod, PrayerTimes} = require("adhan");
 const {find} = require('geo-tz');
 const moment = require('moment-timezone');
 const {playAudio} = require("./AudioManager");
 const {kickAllBots, getMostUsedVoiceChannels} = require("../utils/VoiceUtils");
 const {loadConfig} = require("./ConfigManager");
-const inShedulerGuilds = new Map();
+const inSchedulerGuilds = new Map();
 
 /**
  * Getting prayer times for a given configuration
@@ -41,10 +45,10 @@ function scheduleAdhanNotifier(client) {
  */
 function startSchedulerForGuild(client, guildId) {
 
-    const scheduledTimeout = inShedulerGuilds.get(guildId);
+    const scheduledTimeout = inSchedulerGuilds.get(guildId);
     if(scheduledTimeout) {
         clearTimeout(scheduledTimeout);
-        inShedulerGuilds.delete(guildId);
+        inSchedulerGuilds.delete(guildId);
     }
     function checkAndSchedule() {
         const config = loadConfig(guildId);

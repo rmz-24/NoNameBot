@@ -1,3 +1,7 @@
+/**
+ * @author waSStyle
+ */
+
 const {
     joinVoiceChannel,
     createAudioPlayer,
@@ -9,6 +13,14 @@ const fs = require("fs");
 const prism = require("prism-media");
 const path = require("path");
 
+
+
+/**
+ * Plays an audio file in a given voice channel
+ * @param client Bot's instance
+ * @param channel Voice channel
+ * @param audioName Audio file name
+ */
 function playAudio(client, channel, audioName) {
     const audioPath = path.join(__dirname, "../resources/" + audioName);
 

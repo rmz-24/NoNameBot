@@ -1,3 +1,7 @@
+/**
+ * @author waSStyle
+ */
+
 const { SlashCommandBuilder } = require('discord.js');
 const { Coordinates, CalculationMethod, PrayerTimes } = require('adhan');
 const geocoder = require('node-geocoder');

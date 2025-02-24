@@ -1,4 +1,8 @@
 /**
+ * @author waSStyle
+ */
+
+/**
  * Kicks all bots (other than the client) from all voice channels
  * @param client Bot instance
  */
