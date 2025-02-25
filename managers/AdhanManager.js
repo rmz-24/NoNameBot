@@ -8,6 +8,7 @@ const moment = require('moment-timezone');
 const {playAudio} = require("./AudioManager");
 const {kickAllBots, getMostUsedVoiceChannels} = require("../utils/VoiceUtils");
 const {loadConfig} = require("./ConfigManager");
+const {setupRole} = require("../utils/AdhanUtils");
 const inSchedulerGuilds = new Map();
 
 /**
@@ -44,7 +45,6 @@ function scheduleAdhanNotifier(client) {
  * @param {string} guildId
  */
 function startSchedulerForGuild(client, guildId) {
-
     const scheduledTimeout = inSchedulerGuilds.get(guildId);
     if(scheduledTimeout) {
         clearTimeout(scheduledTimeout);
@@ -52,25 +52,33 @@ function startSchedulerForGuild(client, guildId) {
     }
     function checkAndSchedule() {
         const config = loadConfig(guildId);
-        const prayerTimes = getPrayerTimes(config);
-        const nextPrayer = prayerTimes.nextPrayer();
-        const nextPrayerTime = prayerTimes.timeForPrayer(nextPrayer);
-        const delay = nextPrayerTime.getTime() - Date.now();
-        if (delay > 0) {
-            console.log(`[${guildId}] Prochaine prière : ${nextPrayer} à ${nextPrayerTime.toLocaleTimeString()}`);
-            const timeout = setTimeout(() => {
-                const channel = client.channels.cache.get(config.channelId);
-                if (channel) {
-                    const message = config.message.replace('{prayer}', nextPrayer);
-                    channel.send(message)
+        const guild = client.guilds.cache.get(guildId);
+
+        setupRole(guild, config)
+            .then(updatedConfig => {
+                const prayerTimes = getPrayerTimes(updatedConfig);
+                const nextPrayer = prayerTimes.nextPrayer();
+                const nextPrayerTime = prayerTimes.timeForPrayer(nextPrayer);
+                const delay = nextPrayerTime.getTime() - Date.now();
+                if (delay > 0) {
+                    console.log(`[${guildId}] Prochaine prière : ${nextPrayer} à ${nextPrayerTime.toLocaleTimeString()}`);
+                    const timeout = setTimeout(() => {
+                        const channel = client.channels.cache.get(config.channelId);
+                        if (channel) {
+                            const message = config.message.replace('{prayer}', nextPrayer).replace('{role}', `<@&${config.roleId}>`);
+                            channel.send(message)
+                        }
+                        playAdhan(client, null);
+                        checkAndSchedule();
+                    }, delay);
+                    inSchedulerGuilds.set(guildId, timeout);
+                } else {
+                    setTimeout(checkAndSchedule, 1000);
                 }
-                playAdhan(client,null);
-                checkAndSchedule();
-            }, delay);
-            inShedulerGuilds.set(guildId, nextPrayer);
-        } else {
-            setTimeout(checkAndSchedule, 1000);
-        }
+            })
+            .catch(error => {
+                console.error(`[${guildId}] Échec de la configuration : ${error}`);
+            });
     }
     checkAndSchedule();
 }
@@ -94,5 +102,5 @@ function playAdhan(client, guildId) {
 
 
 module.exports = {
-    scheduleAdhanNotifier, startSchedulerForGuild
+    scheduleAdhanNotifier, startSchedulerForGuild, playAdhan
 }

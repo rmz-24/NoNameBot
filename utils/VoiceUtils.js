@@ -52,8 +52,7 @@ function getMostUsedVoiceChannels(client, guildId) {
         if (voiceChannels.size > 0) {
             const mostPopulated = [...voiceChannels.values()].reduce((max, channel) =>
                 channel.members.size > max.members.size ? channel : max
-            );
-
+            )
             mostUsedChannels.push(mostPopulated);
         }
     });

@@ -10,7 +10,8 @@ const path = require('path');
 const {find} = require('geo-tz');
 const moment = require('moment-timezone');
 const {loadConfig} = require("../../managers/ConfigManager");
-const {startSchedulerForGuild} = require("../../managers/AdhanManager");
+const {startSchedulerForGuild, playAdhan} = require("../../managers/AdhanManager");
+const {setupRole} = require("../../utils/AdhanUtils");
 
 const geo = geocoder({ provider: 'openstreetmap' });
 
@@ -33,7 +34,10 @@ module.exports = {
                         .setDescription('Salon pour les annonces'))
                 .addStringOption(option =>
                     option.setName('message')
-                        .setDescription('Message personnalisé pour les annonces')))
+                        .setDescription('Message personnalisé pour les annonces'))
+                .addRoleOption(option =>
+                    option.setName('role')
+                        .setDescription('Rôle à mentionner pour les notifications')))
         .addSubcommand(subcommand =>
             subcommand
                 .setName('force')
@@ -41,7 +45,10 @@ module.exports = {
         .addSubcommand(subcommand =>
             subcommand
                 .setName('next')
-                .setDescription('Affiche le prochain horaire de prière')),
+                .setDescription('Affiche le prochain horaire de prière'))
+        .addSubcommand(subCommand =>
+            subCommand.setName('enable')
+                .setDescription('Active les notifications pour l\'Adhan')),
 
     async execute(interaction) {
         const guildId = interaction.guildId;
@@ -60,6 +67,10 @@ module.exports = {
 
             case 'next':
                 await handleNext(interaction, config);
+                break;
+
+            case 'enable':
+                await handleEnable(interaction, config);
                 break;
         }
     },
@@ -83,6 +94,7 @@ async function handleConfig(interaction, config, configPath) {
     const ville = interaction.options.getString('ville');
     const salon = interaction.options.getChannel('salon');
     const message = interaction.options.getString('message');
+    const role = interaction.options.getRole('role');
 
     let updateMsg = [];
 
@@ -109,8 +121,28 @@ async function handleConfig(interaction, config, configPath) {
         updateMsg.push(`💬 Message personnalisé : ${message}`);
     }
 
-    fs.writeFileSync(configPath, JSON.stringify(config, null, 2));
+    if (role) {
+        config.roleId = role.id;
+        updateMsg.push(`🔔 Rôle configuré : ${role.toString()}`);
+    } else if (!config.roleId) {
+        let adhanRole = interaction.guild.roles.cache.find(r => r.name === 'Adhan');
+        if (!adhanRole) {
+            try {
+                adhanRole = await interaction.guild.roles.create({
+                    name: 'Adhan',
+                    color: '#0099ff',
+                    reason: 'Rôle pour les notifications Adhan'
+                });
+                updateMsg.push(`🎭 Rôle créé : ${adhanRole.toString()}`);
+            } catch (error) {
+                return interaction.reply({ content: '❌ Erreur lors de la création du rôle !', ephemeral: true });
+            }
+        }
+        config.roleId = adhanRole.id;
+    }
 
+    fs.writeFileSync(configPath, JSON.stringify(config, null, 2));
+    // Refreshing Adhan's scheduler for the guild
     try {
       startSchedulerForGuild(interaction.client, interaction.guildId);
     } catch (error) {
@@ -126,7 +158,6 @@ async function handleConfig(interaction, config, configPath) {
 async function handleForce(interaction) {
     await interaction.deferReply({ ephemeral: true });
     const client = interaction.client;
-
     try {
         playAdhan(client,interaction.guildId);
         interaction.editReply('✅ Adhan lancé avec succès !');
@@ -137,10 +168,8 @@ async function handleForce(interaction) {
 
 async function handleNext(interaction, config) {
     const coordinates = new Coordinates(...config.coordinates);
-
     const timeZones = find(config.coordinates[0], config.coordinates[1]);
     const timeZone = timeZones.length > 0 ? timeZones[0] : 'Africa/Algiers';
-
     const localDate = moment().tz(timeZone).toDate();
 
     const prayerTimes = new PrayerTimes(
@@ -151,13 +180,40 @@ async function handleNext(interaction, config) {
 
     const nextPrayer = prayerTimes.nextPrayer();
     const nextTime = prayerTimes.timeForPrayer(nextPrayer);
-
     const localMoment = moment(nextTime).tz(timeZone);
-    const remaining = localMoment.fromNow();
+
+    const unixTimestamp = Math.floor(localMoment.valueOf() / 1000);
+    const dynamicTimestamp = `<t:${unixTimestamp}:R>`;
+
     const localTime = localMoment.format('HH:mm');
 
     interaction.reply({
-        content: `🕋 Prochaine prière (**${nextPrayer}**) à ${localTime} (${remaining})`,
+        content: `🕋 Prochaine prière (**${nextPrayer}**) à ${localTime} (${dynamicTimestamp})`,
         ephemeral: true
     });
+}
+
+async function handleEnable(interaction, config) {
+    try {
+        const updatedConfig = await setupRole(interaction.guild, config);
+
+        if (!interaction.member.roles.cache.has(updatedConfig.roleId)) {
+            await interaction.member.roles.add(updatedConfig.roleId);
+            return interaction.reply({
+                content: '✅ Vous recevez maintenant les notifications !',
+                ephemeral: true
+            });
+        }
+
+        interaction.reply({
+            content: '⚠️ Vous avez déjà le rôle !',
+            ephemeral: true
+        });
+
+    } catch (error) {
+        interaction.reply({
+            content: '❌ Erreur lors de la configuration du rôle !',
+            ephemeral: true
+        });
+    }
 }

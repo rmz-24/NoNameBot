@@ -21,11 +21,17 @@ function loadConfig(guildId) {
             city: 'Alger',
             coordinates: [0.7755, 3.0587],
             channelId: null,
-            message: "Aller les <@&1200937306958348338>, c'est l'heure du **{prayer}** ! 🕌"
+            message: "Aller les <@&{role}>, c'est l'heure du **{prayer}** ! 🕌",
+            roleID: null
         };
     }
 }
 
+function saveConfig(guildId, config) {
+    const configPath = path.join(dataPath, `${guildId}.json`);
+    fs.writeFileSync(configPath, JSON.stringify(config, null, 2));
+}
+
 module.exports = {
-    loadConfig
+    loadConfig, saveConfig
 }
