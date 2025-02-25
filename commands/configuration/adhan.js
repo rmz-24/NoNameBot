@@ -2,14 +2,11 @@
  * @author waSStyle
  */
 
-const { SlashCommandBuilder } = require('discord.js');
-const { Coordinates, CalculationMethod, PrayerTimes } = require('adhan');
+const { SlashCommandBuilder, PermissionFlagsBits } = require('discord.js');
 const geocoder = require('node-geocoder');
 const fs = require('fs');
 const path = require('path');
-const {find} = require('geo-tz');
-const moment = require('moment-timezone');
-const {loadConfig} = require("../../managers/ConfigManager");
+const {loadConfig, saveConfig} = require("../../managers/ConfigManager");
 const {startSchedulerForGuild, playAdhan} = require("../../managers/AdhanManager");
 const {setupRole} = require("../../utils/AdhanUtils");
 
@@ -42,31 +39,22 @@ module.exports = {
             subcommand
                 .setName('force')
                 .setDescription('Force la lecture immédiate de l\'Adhan'))
-        .addSubcommand(subcommand =>
-            subcommand
-                .setName('next')
-                .setDescription('Affiche le prochain horaire de prière'))
         .addSubcommand(subCommand =>
             subCommand.setName('enable')
-                .setDescription('Active les notifications pour l\'Adhan')),
+                .setDescription('Active les notifications pour l\'Adhan'))
+        /*.setDefaultMemberPermissions(PermissionFlagsBits.ManageGuild)*/,
 
     async execute(interaction) {
         const guildId = interaction.guildId;
-        const configPath = path.join(dataPath, `${guildId}.json`);
-
         let config = loadConfig(guildId);
 
         switch (interaction.options.getSubcommand()) {
             case 'config':
-                await handleConfig(interaction, config, configPath);
+                await handleConfig(interaction, config);
                 break;
 
             case 'force':
                 await handleForce(interaction);
-                break;
-
-            case 'next':
-                await handleNext(interaction, config);
                 break;
 
             case 'enable':
@@ -76,7 +64,7 @@ module.exports = {
     },
 };
 
-async function handleConfig(interaction, config, configPath) {
+async function handleConfig(interaction, config) {
     const allowedUserIds = [
         '562335433057370153',
         '523543290377928734',
@@ -140,8 +128,7 @@ async function handleConfig(interaction, config, configPath) {
         }
         config.roleId = adhanRole.id;
     }
-
-    fs.writeFileSync(configPath, JSON.stringify(config, null, 2));
+    saveConfig(interaction.guildId, config);
     // Refreshing Adhan's scheduler for the guild
     try {
       startSchedulerForGuild(interaction.client, interaction.guildId);
@@ -164,33 +151,6 @@ async function handleForce(interaction) {
     } catch (error) {
         interaction.editReply('❌ Erreur lors de la lecture de l\'Adhan');
     }
-}
-
-async function handleNext(interaction, config) {
-    const coordinates = new Coordinates(...config.coordinates);
-    const timeZones = find(config.coordinates[0], config.coordinates[1]);
-    const timeZone = timeZones.length > 0 ? timeZones[0] : 'Africa/Algiers';
-    const localDate = moment().tz(timeZone).toDate();
-
-    const prayerTimes = new PrayerTimes(
-        coordinates,
-        localDate,
-        CalculationMethod.UmmAlQura()
-    );
-
-    const nextPrayer = prayerTimes.nextPrayer();
-    const nextTime = prayerTimes.timeForPrayer(nextPrayer);
-    const localMoment = moment(nextTime).tz(timeZone);
-
-    const unixTimestamp = Math.floor(localMoment.valueOf() / 1000);
-    const dynamicTimestamp = `<t:${unixTimestamp}:R>`;
-
-    const localTime = localMoment.format('HH:mm');
-
-    interaction.reply({
-        content: `🕋 Prochaine prière (**${nextPrayer}**) à ${localTime} (${dynamicTimestamp})`,
-        ephemeral: true
-    });
 }
 
 async function handleEnable(interaction, config) {
