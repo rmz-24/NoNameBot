@@ -4,9 +4,13 @@ const { Client, Collection, Events, GatewayIntentBits } = require('discord.js');
 
 // Require the necessary discord.js classes
 const { token } = require('./config.json');
+const { handleCounting } = require('./counting');
+
 
 // Create a new client instance
-const client = new Client({ intents: [GatewayIntentBits.Guilds] });
+const client = new Client({ intents: [GatewayIntentBits.Guilds,
+GatewayIntentBits.GuildMessages,GatewayIntentBits.MessageContent] });
+
 
 client.commands = new Collection();
 
@@ -34,6 +38,14 @@ for (const folder of commandFolders) {
 client.once(Events.ClientReady, readyClient => {
 	console.log(`Ready! Logged in as ${readyClient.user.tag}`);
 });
+countingChannelId='921141446722072636';
+client.on('messageCreate', async message => {
+	// Ignore messages from bots
+	if (message.author.bot) return;
+	
+	// Delegate counting logic to the handleCounting function
+	await handleCounting(message, countingChannelId);
+  });
 
 client.on(Events.InteractionCreate, async interaction => {
 	if (!interaction.isChatInputCommand()) return;
