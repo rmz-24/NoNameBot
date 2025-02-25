@@ -1,5 +1,4 @@
 let currentCount = 0;
-let max=0;
 let lastAuthorId = ''; // Store the ID of the user who last counted
 /**
  * Processes a message for the counting game.
@@ -27,9 +26,7 @@ if (number === currentCount + 1 ||Math.abs((currentCount+1)-number)<=0.5) {
       lastAuthorId = '';
     } else {
       currentCount++;
-      if(max<currentCount){
-        max=currentCount;
-      }
+      
       lastAuthorId = message.author.id;
       console.log(`Count updated: ${currentCount}`);
       await message.react('✅');
@@ -47,9 +44,4 @@ if (number === currentCount + 1 ||Math.abs((currentCount+1)-number)<=0.5) {
     }
   }
 }
-message.channel.setTopic("the current Record is",max)
-  .then(updatedChannel => {
-    console.log(`Updated topic: ${updatedChannel.topic}`);
-  })
-  .catch(console.error);
 module.exports = { handleCounting };
