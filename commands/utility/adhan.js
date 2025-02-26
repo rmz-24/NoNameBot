@@ -1,4 +1,4 @@
-const { SlashCommandBuilder, InteractionContextType } = require('discord.js');
+const { SlashCommandBuilder } = require('discord.js');
 const {Coordinates, PrayerTimes, CalculationMethod} = require("adhan");
 const {find} = require("geo-tz");
 const moment = require("moment-timezone");
