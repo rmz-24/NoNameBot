@@ -17,7 +17,7 @@ if (!fs.existsSync(dataPath)) fs.mkdirSync(dataPath);
 
 module.exports = {
     data: new SlashCommandBuilder()
-        .setName('adhan')
+        .setName('config')
         .setDescription('Gestionnaire de prières')
         .addSubcommand(subcommand =>
             subcommand
