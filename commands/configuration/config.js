@@ -8,8 +8,6 @@ const fs = require('fs');
 const path = require('path');
 const {loadConfig, saveConfig} = require("../../managers/ConfigManager");
 const {startSchedulerForGuild, playAdhan} = require("../../managers/AdhanManager");
-const {setupRole} = require("../../utils/AdhanUtils");
-
 const geo = geocoder({ provider: 'openstreetmap' });
 
 const dataPath = path.join(__dirname, '../../data');
@@ -39,9 +37,6 @@ module.exports = {
             subcommand
                 .setName('force')
                 .setDescription('Force la lecture immédiate de l\'Adhan'))
-        .addSubcommand(subCommand =>
-            subCommand.setName('enable')
-                .setDescription('Active les notifications pour l\'Adhan'))
         /*.setDefaultMemberPermissions(PermissionFlagsBits.ManageGuild)*/,
 
     async execute(interaction) {
@@ -65,6 +60,7 @@ module.exports = {
 };
 
 async function handleConfig(interaction, config) {
+
     const allowedUserIds = [
         '562335433057370153',
         '523543290377928734',
@@ -150,30 +146,5 @@ async function handleForce(interaction) {
         interaction.editReply('✅ Adhan lancé avec succès !');
     } catch (error) {
         interaction.editReply('❌ Erreur lors de la lecture de l\'Adhan');
-    }
-}
-
-async function handleEnable(interaction, config) {
-    try {
-        const updatedConfig = await setupRole(interaction.guild, config);
-
-        if (!interaction.member.roles.cache.has(updatedConfig.roleId)) {
-            await interaction.member.roles.add(updatedConfig.roleId);
-            return interaction.reply({
-                content: '✅ Vous recevez maintenant les notifications !',
-                ephemeral: true
-            });
-        }
-
-        interaction.reply({
-            content: '⚠️ Vous avez déjà le rôle !',
-            ephemeral: true
-        });
-
-    } catch (error) {
-        interaction.reply({
-            content: '❌ Erreur lors de la configuration du rôle !',
-            ephemeral: true
-        });
     }
 }
