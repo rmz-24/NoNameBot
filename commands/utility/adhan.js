@@ -15,7 +15,8 @@ module.exports = {
             subCommand
                 .setName('enable')
                 .setDescription('Active les notifications pour l\'Adhan'))
-        .setName('adhan'),
+        .setName('adhan')
+        .setDescription('Utilitaire de l\'Adhan'),
     async execute(interaction) {
         const guildId = interaction.guildId;
         let config = loadConfig(guildId);
